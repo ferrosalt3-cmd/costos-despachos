@@ -1,4 +1,6 @@
 streamlit
 pandas
-matplotlib
+altair
 openpyxl
+gspread==6.1.2
+google-auth==2.33.0
