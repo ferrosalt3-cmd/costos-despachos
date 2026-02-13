@@ -16,7 +16,10 @@ from openpyxl.chart import BarChart, Reference
 from openpyxl.chart.label import DataLabelList
 
 import gspread
+from gspread.exceptions import APIError
 from google.oauth2.service_account import Credentials
+
+import time as _time
 
 
 # ---------------------------
@@ -227,6 +230,8 @@ def _read_ws_df(sh, title: str) -> pd.DataFrame:
     return pd.DataFrame(rows, columns=headers)
 
 
+# ✅ FIX PRINCIPAL: NO usar ws.clear() (reduce 2 llamadas -> 1 llamada)
+# + retry anti-429/errores temporales
 def _write_ws_df(sh, title: str, df: pd.DataFrame):
     ws = _get_ws(sh, title)
     df2 = df.copy().fillna("")
@@ -235,9 +240,21 @@ def _write_ws_df(sh, title: str, df: pd.DataFrame):
     for col in df2.columns:
         if pd.api.types.is_datetime64_any_dtype(df2[col]):
             df2[col] = df2[col].dt.strftime("%Y-%m-%d %H:%M:%S")
+
     values = [df2.columns.tolist()] + df2.astype(str).values.tolist()
-    ws.clear()
-    ws.update(values)
+
+    # 3 reintentos con backoff
+    last_err = None
+    for attempt in range(3):
+        try:
+            ws.update("A1", values)  # 1 sola llamada
+            return
+        except APIError as e:
+            last_err = e
+            _time.sleep(2 * (attempt + 1))
+
+    # Si sigue fallando, levanta error claro
+    raise last_err
 
 
 @st.cache_data(ttl=25)
@@ -848,4 +865,3 @@ with tabs[4]:
         file_name=f"reporte_{dia.isoformat()}.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
-
