@@ -28,8 +28,8 @@ TIPOS_TAREA_DEFAULT = [
     "Despacho a carro",
     "Recepción de mercadería",
     "Picking",
-    "Verificación de inventario",
-    "Emisión de guías",
+    "Importacion",
+    "Exportacion",
     "Limpieza y orden",
     "Otros",
 ]
@@ -848,3 +848,4 @@ with tabs[4]:
         file_name=f"reporte_{dia.isoformat()}.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
+
